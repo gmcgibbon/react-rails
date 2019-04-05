@@ -27,18 +27,20 @@ module React
         # Watch files ending in `server_renderer_extensions` in each of `server_renderer_directories`
         reload_paths = config.react.server_renderer_directories.reduce({}) do |memo, dir|
           app_dir = File.join(app.root, dir)
-          memo[app_dir] = config.react.server_renderer_extensions
+          memo[app_dir] = config.react.server_renderer_extensions if Dir.exist?(app_dir)
           memo
         end
 
-        # Rails checks these objects for changes:
-        react_reloader = app.config.file_watcher.new([], reload_paths) do
-          React::ServerRendering.reset_pool
-        end
-        app.reloaders << react_reloader
+        if reload_paths.any?
+          # Rails checks these objects for changes:
+          react_reloader = app.config.file_watcher.new([], reload_paths) do
+            React::ServerRendering.reset_pool
+          end
+          app.reloaders << react_reloader
 
-        # Reload renderers in dev when files change
-        config.to_prepare { react_reloader.execute_if_updated }
+          # Reload renderers in dev when files change
+          config.to_prepare { react_reloader.execute_if_updated }
+        end
       end
 
       # Include the react-rails view helper lazily
